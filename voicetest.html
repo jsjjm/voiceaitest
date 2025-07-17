@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Registro por voz con OpenAI</title>
     <style>
-        body {
+        /*body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 900px;
             margin: 0 auto;
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-        }
+        }*/
         
         .container {
             background: rgba(255, 255, 255, 0.95);
@@ -208,9 +202,7 @@
             margin-top: 0;
         }
     </style>
-</head>
 
-<body>
     <div class="container">
         <h2>🤖 Registro de Gastos con OpenAI</h2>
 
@@ -363,7 +355,7 @@
         2. tipo: "ingreso" o "egreso"
         3. categoria: categoría apropiada (Alimentación, Transporte, Entretenimiento, Salud, Educación, Servicios, Ropa, Otros, Freelance, Sueldo)
         4. descripcion: descripción limpia y clara
-        5. fecha: fecha en formato YYYY-MM-DD (hoy es ${new Date().toISOString().split('T')[0]}, si dice "ayer" usa la fecha de ayer)
+        5. fecha: fecha en formato YYYY-MM-DD (hoy es ${new Date().toISOString().split('T')[0]}, si dice "ayer" usa la fecha de ayer, y si te especifica el dia usa la fecha especificada)
         6. confianza: número del 0-100 indicando qué tan seguro estás de la extracción
 
         Responde SOLO con JSON válido, sin texto adicional.
@@ -522,6 +514,3 @@
             }
         });
     </script>
-</body>
-
-</html>
