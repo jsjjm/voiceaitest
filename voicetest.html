@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Registro por voz con OpenAI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .api-config {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .api-config input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .api-config button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .api-config button:hover {
+            background: #218838;
+        }
+        
+        .grabar-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .grabar-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(76, 175, 80, 0.4);
+        }
+        
+        .grabar-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .grabar-btn.grabando {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .texto-box {
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 80px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .resultado {
+            background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+            border: 2px solid #4CAF50;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .resultado.egreso {
+            background: linear-gradient(135deg, #fff3e0, #ffeaa7);
+            border-color: #ff9800;
+        }
+        
+        .resultado.ingreso {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            border-color: #4CAF50;
+        }
+        
+        .error {
+            background: linear-gradient(135deg, #ffe8e8, #ffcdd2);
+            border: 2px solid #f44336;
+            color: #d32f2f;
+        }
+        
+        .estado {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .loading {
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .loading::after {
+            content: '⏳';
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .datos-guardados {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            line-height: 1.8;
+        }
+        
+        .monto {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .categoria {
+            background: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        
+        .sugerencias {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .sugerencias h4 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>🤖 Registro de Gastos con OpenAI</h2>
+
+        <div class="api-config">
+            <h3>🔑 Configuración de OpenAI</h3>
+            <input type="password" id="apiKey" placeholder="Ingresa tu API Key de OpenAI aquí..." />
+            <button onclick="guardarApiKey()">Guardar API Key</button>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                Obtén tu API Key en: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+            </div>
+        </div>
+
+        <div class="estado" id="estado">🎙️ Configura tu API Key para comenzar</div>
+
+        <button class="grabar-btn" onclick="grabar()" id="btnGrabar" disabled>
+      🎙️ Grabar Gasto
+    </button>
+
+        <div>
+            <strong>📝 Texto reconocido:</strong>
+            <div id="textoReconocido" class="texto-box">
+                Presiona el botón para comenzar a grabar...
+            </div>
+        </div>
+
+        <div id="resultado" class="resultado">
+            <h3>✅ Registro procesado por IA:</h3>
+            <div id="datosGuardados" class="datos-guardados"></div>
+        </div>
+
+        <div class="sugerencias">
+            <h4>💡 Ejemplos de frases que puedes usar:</h4>
+            <ul>
+                <li><strong>Gastos:</strong> "Gasté 25 soles en almuerzo", "Pagué 15 soles de pasaje"</li>
+                <li><strong>Ingresos:</strong> "Recibí 500 soles de sueldo", "Me pagaron 200 soles por freelance"</li>
+                <li><strong>Con fecha:</strong> "Ayer compré ropa por 80 soles", "Gasté 12 soles en desayuno hoy"</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let reconocimiento = null;
+        let apiKey = null;
+
+        // Cargar API Key guardada
+        window.onload = function() {
+            const savedKey = localStorage.getItem('openai_api_key');
+            if (savedKey) {
+                apiKey = savedKey;
+                document.getElementById('apiKey').value = savedKey;
+                document.getElementById('btnGrabar').disabled = false;
+                document.getElementById('estado').textContent = '🎙️ Listo para grabar';
+                document.getElementById('estado').style.background = 'rgba(76, 175, 80, 0.1)';
+            }
+        };
+
+        function guardarApiKey() {
+            const keyInput = document.getElementById('apiKey');
+            const key = keyInput.value.trim();
+
+            if (!key) {
+                alert('Por favor ingresa una API Key válida');
+                return;
+            }
+
+            apiKey = key;
+            localStorage.setItem('openai_api_key', key);
+
+            document.getElementById('btnGrabar').disabled = false;
+            document.getElementById('estado').textContent = '🎙️ Listo para grabar';
+            document.getElementById('estado').style.background = 'rgba(76, 175, 80, 0.1)';
+
+            alert('✅ API Key guardada correctamente');
+        }
+
+        function grabar() {
+            if (!apiKey) {
+                alert('Por favor configura tu API Key primero');
+                return;
+            }
+
+            // Verificar compatibilidad
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.');
+                return;
+            }
+
+            const btnGrabar = document.getElementById('btnGrabar');
+            const estado = document.getElementById('estado');
+            const textoReconocido = document.getElementById('textoReconocido');
+            const resultado = document.getElementById('resultado');
+
+            // Crear reconocimiento
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            reconocimiento = new SpeechRecognition();
+
+            reconocimiento.lang = 'es-PE';
+            reconocimiento.interimResults = false;
+            reconocimiento.maxAlternatives = 1;
+
+            // Eventos
+            reconocimiento.onstart = function() {
+                btnGrabar.disabled = true;
+                btnGrabar.textContent = '🔴 Grabando...';
+                btnGrabar.classList.add('grabando');
+                estado.textContent = '🎤 Escuchando... Habla ahora';
+                estado.style.background = 'rgba(244, 67, 54, 0.1)';
+                textoReconocido.textContent = '🎤 Grabando...';
+                resultado.style.display = 'none';
+            };
+
+            reconocimiento.onresult = function(event) {
+                const texto = event.results[0][0].transcript;
+                textoReconocido.textContent = texto;
+                estado.innerHTML = '🤖 Procesando con OpenAI...<span class="loading"></span>';
+                estado.style.background = 'rgba(33, 150, 243, 0.1)';
+
+                // Enviar a OpenAI
+                procesarConOpenAI(texto);
+            };
+
+            reconocimiento.onerror = function(event) {
+                console.error('Error en reconocimiento:', event.error);
+                estado.textContent = '❌ Error en reconocimiento: ' + event.error;
+                estado.style.background = 'rgba(244, 67, 54, 0.1)';
+                resetearBoton();
+            };
+
+            reconocimiento.onend = function() {
+                resetearBoton();
+            };
+
+            // Iniciar reconocimiento
+            reconocimiento.start();
+        }
+
+        async function procesarConOpenAI(texto) {
+            const estado = document.getElementById('estado');
+            const resultado = document.getElementById('resultado');
+            const datosGuardados = document.getElementById('datosGuardados');
+
+            try {
+                const prompt = `
+        Analiza el siguiente texto de un registro de gasto/ingreso y extrae la información en formato JSON:
+
+        Texto: "${texto}"
+
+        Necesito que extraigas:
+        1. monto: número decimal del monto mencionado
+        2. tipo: "ingreso" o "egreso"
+        3. categoria: categoría apropiada (Alimentación, Transporte, Entretenimiento, Salud, Educación, Servicios, Ropa, Otros, Freelance, Sueldo)
+        4. descripcion: descripción limpia y clara
+        5. fecha: fecha en formato YYYY-MM-DD (hoy es ${new Date().toISOString().split('T')[0]}, si dice "ayer" usa la fecha de ayer)
+        6. confianza: número del 0-100 indicando qué tan seguro estás de la extracción
+
+        Responde SOLO con JSON válido, sin texto adicional.
+        `;
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [{
+                            role: 'system',
+                            content: 'Eres un asistente experto en analizar gastos e ingresos. Respondes únicamente con JSON válido sin texto adicional.'
+                        }, {
+                            role: 'user',
+                            content: prompt
+                        }],
+                        temperature: 0.3,
+                        max_tokens: 500
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Error API: ${response.status} - ${errorData.error?.message || 'Error desconocido'}`);
+                }
+
+                const data = await response.json();
+                const textoRespuesta = data.choices[0].message.content;
+
+                // Limpiar respuesta para obtener solo el JSON
+                const jsonMatch = textoRespuesta.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No se pudo extraer JSON de la respuesta');
+                }
+
+                const datosIA = JSON.parse(jsonMatch[0]);
+
+                // Mostrar resultado
+                mostrarResultado(datosIA);
+
+            } catch (error) {
+                console.error('Error procesando con OpenAI:', error);
+                estado.textContent = '❌ Error procesando con IA: ' + error.message;
+                estado.style.background = 'rgba(244, 67, 54, 0.1)';
+
+                // Fallback a procesamiento local
+                const datosLocal = procesarTextoLocal(texto);
+                mostrarResultado(datosLocal);
+            }
+        }
+
+        function mostrarResultado(datos) {
+            const estado = document.getElementById('estado');
+            const resultado = document.getElementById('resultado');
+            const datosGuardados = document.getElementById('datosGuardados');
+
+            if (datos.monto && datos.monto > 0) {
+                // Mostrar resultado exitoso
+                estado.textContent = '✅ Registro procesado con OpenAI exitosamente';
+                estado.style.background = 'rgba(76, 175, 80, 0.1)';
+
+                // Aplicar clase según el tipo
+                resultado.className = `resultado ${datos.tipo}`;
+                resultado.style.display = 'block';
+
+                // Mostrar emoji según el tipo
+                const emoji = datos.tipo === 'ingreso' ? '💰' : '💸';
+                const tipoTexto = datos.tipo === 'ingreso' ? 'INGRESO' : 'EGRESO';
+
+                datosGuardados.innerHTML = `
+          <div style="text-align: center;">
+            <div class="monto">${emoji} S/ ${datos.monto}</div>
+            <div class="categoria">${datos.categoria}</div>
+          </div>
+          <hr style="margin: 20px 0;">
+          <strong>📊 Tipo:</strong> ${tipoTexto}<br>
+          <strong>📅 Fecha:</strong> ${datos.fecha}<br>
+          <strong>📝 Descripción:</strong> ${datos.descripcion}<br>
+          ${datos.confianza ? `<strong>🎯 Confianza IA:</strong> ${datos.confianza}%<br>` : ''}
+          <strong>🕐 Registrado:</strong> ${new Date().toLocaleString('es-PE')}
+        `;
+
+                // Guardar en localStorage para historial
+                guardarEnHistorial(datos);
+
+            } else {
+                // Mostrar error
+                estado.textContent = '❌ No se detectó un monto válido';
+                estado.style.background = 'rgba(244, 67, 54, 0.1)';
+
+                resultado.className = 'resultado error';
+                resultado.style.display = 'block';
+                datosGuardados.innerHTML = `
+          <strong>❌ Error de procesamiento</strong><br>
+          Por favor, menciona un monto claro en tu grabación.<br><br>
+          <strong>Ejemplos:</strong><br>
+          • "Gasté 20 soles en almuerzo"<br>
+          • "Recibí 500 soles de sueldo"<br>
+          • "Pagué 15 soles de pasaje"
+        `;
+            }
+        }
+
+        function procesarTextoLocal(texto) {
+            // Procesamiento local como fallback
+            const resultado = {
+                monto: null,
+                categoria: 'Otros',
+                tipo: 'egreso',
+                fecha: new Date().toISOString().split('T')[0],
+                descripcion: texto,
+                confianza: 50
+            };
+
+            // Buscar monto
+            const montoMatch = texto.match(/(\d+(?:[.,]\d+)?)\s*(sol(es)?)?/i);
+            if (montoMatch) {
+                resultado.monto = parseFloat(montoMatch[1].replace(',', '.'));
+            }
+
+            return resultado;
+        }
+
+        function guardarEnHistorial(datos) {
+            const historial = JSON.parse(localStorage.getItem('historial_gastos') || '[]');
+            historial.push({
+                ...datos,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('historial_gastos', JSON.stringify(historial));
+        }
+
+        function resetearBoton() {
+            const btnGrabar = document.getElementById('btnGrabar');
+            const estado = document.getElementById('estado');
+
+            btnGrabar.disabled = false;
+            btnGrabar.textContent = '🎙️ Grabar Gasto';
+            btnGrabar.classList.remove('grabando');
+
+            if (estado.textContent.includes('Procesando')) {
+                estado.textContent = '🎙️ Listo para grabar';
+                estado.style.background = 'rgba(76, 175, 80, 0.1)';
+            }
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' && e.ctrlKey) {
+                e.preventDefault();
+                grabar();
+            }
+        });
+    </script>
+</body>
+
+</html>
